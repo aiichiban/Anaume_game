@@ -1,0 +1,136 @@
+body { font-family: sans-serif; background-color: #f4f7f6; text-align: center; margin: 0; padding: 20px; }
+    #game-board {
+        background-color: white; max-width: 800px; margin: 0 auto; padding: 30px;
+        border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .phase { display: none; }
+    .phase.active { display: block; }
+
+    #card-container {
+        position: relative;
+        width: 100%;
+        max-width: 600px;
+        aspect-ratio: 3 / 1;
+        container-type: inline-size;
+        background-color: #fff;
+        border: 2px solid #ccc;
+        border-radius: 10px;
+        margin: 20px auto;
+        overflow: hidden;
+        cursor: crosshair;
+        user-select: none;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    #card-genre {
+        position: absolute;
+        bottom: 15px;
+        width: 100%;
+        text-align: center; /* 下中央揃え */
+        letter-spacing: 1em;
+        text-indent: 1em; /* 最後の余白を消す */
+        color: #000000; 
+        font-size: 16px; 
+        font-weight: bold;
+    }
+
+#card-word {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    transform: translate(-50%, -50%);
+    letter-spacing: 0.5em;
+    text-indent: 0.5em;
+    color: #000000;
+    font-size: 7cqw;
+    font-weight: bold;
+}
+
+.seal {
+    position: absolute;
+    width: 15cqw;
+    height: 15cqw;
+    background-color: #e74c3c;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    z-index: 10;
+}
+
+    .title-text {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    #timer {
+        font-size: 40px;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    #answer-input { font-size: 20px;
+        padding: 10px;
+        width: 80%;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .btn {
+        font-size: 18px;
+        padding: 12px 24px;
+        margin: 5px; border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 85%;
+        background-color: #000000;
+        color: #ffffff;
+        transition: opacity 0.2s;
+    }
+
+    .lobby-input {
+        font-size: 20px;
+        padding: 10px;
+        width: 70%;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    #name-input { margin-bottom: 20px; }
+
+    .players-list {
+        font-size: 20px;
+        font-weight: bold;
+        margin: 20px 0;
+    }
+
+    .result-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    .result-genre {
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    .result-word {
+        font-size: 36px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        letter-spacing: 5px;
+    }
+    .result-detail {
+        border-top: 1px dashed #ccc;
+        padding-top: 15px;
+    }
+    .result-my-ans {
+        font-size: 18px;
+        margin-bottom: 10px;
+    }
+    .result-judgment {
+        font-size: 28px;
+        font-weight: bold;
+    }

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>穴埋め単語ゲーム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <script src="words.js"></script>
+
+    <div id="game-board">
+        
+        <div id="card-wrapper" style="display: none;">
+            <div id="card-container">
+                <div id="card-genre">ジャンル: ???</div>
+                <div id="card-word">単語</div>
+            </div>
+        </div>
+
+        <div id="phase-lobby" class="phase active">
+            <div class="title-text">ロビー</div>
+            <p>合言葉と名前を入力してください</p>
+            <input type="text" id="room-input" class="lobby-input" placeholder="合言葉" autocomplete="off">
+            <input type="text" id="name-input" class="lobby-input" placeholder="名前" autocomplete="off">
+            <p id="lobby-error" style="color: red; font-weight: bold; margin: 5px 0;"></p>
+            <button class="btn" id="btn-join-game">部屋に入る</button>
+        </div>
+
+        <div id="phase-room-wait" class="phase">
+            <h2 class="wait-text">参加者を待っています</h2>
+            <p id="joined-players-list" class="players-list">参加者: </p>
+            <button class="btn" id="btn-start-game" disabled>開始</button>
+        </div>
+
+        <div id="phase-rules" class="phase">
+            <div class="title-text color-lobby">ルール</div>
+            <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                <p style="margin-bottom: 10px;">カードに書いてある単語をシールで隠してください</p>
+                <p style="margin-bottom: 10px;">単語を隠したらカードを交換して解答します。</p>
+                <p>残りシール１点　単語正解２点</p>
+            </div>
+            <button class="btn" id="btn-go-setup">開始</button>
+        </div>
+
+        <div id="phase-setup" class="phase">
+            <div class="title-text color-setup">シールで文字を隠してください。(<span id="setup-progress">1/1</span>)</div>
+            <p>タップした場所にシールが貼れます。<br>（残り: <span id="setup-seal-count">15</span>枚）</p>
+            <button class="btn" id="btn-setup-next">次の単語へ</button>
+        </div>
+
+        <div id="phase-wait" class="phase">
+            <h2 class="wait-text">相手を待っています...</h2>
+            <p>相手がシールの配置を完了するまで<br>このままお待ちください。</p>
+        </div>
+
+        <div id="phase-play" class="phase">
+            <div class="title-text color-play">解答 (<span id="play-progress">1/1</span>)</div>
+            <div id="timer">10</div>
+
+            <div id="answer-controls">
+                <input type="text" id="answer-input" placeholder="答えを入力..." autocomplete="off">
+                <br>
+                <button class="btn" id="btn-check-answer">回答</button>
+            </div>
+        </div>
+
+        <div id="phase-play-wait" class="phase">
+            <h2 class="wait-text">相手の解答を待っています...</h2>
+            <p>お互いが全問解き終わると、<br>一斉に結果発表が始まります！</p>
+        </div>
+
+        <div id="phase-result" class="phase">
+            <div class="title-text color-play"> 結果発表 (<span id="result-progress">1/1</span>)</div>
+            
+            <div class="result-card">
+                <div id="res-genre" class="result-genre"></div>
+                <div id="res-word" class="result-word"></div>
+                <div class="result-detail">
+                    <div id="res-my-ans" class="result-my-ans"></div>
+                    <div id="res-judgment" class="result-judgment"></div>
+                </div>
+            </div>
+
+            <button class="btn" id="btn-result-next">次の結果へ ＞</button>
+        </div>
+
+        <div id="phase-finish" class="phase">
+            <h2 class="finish-text">ゲーム終了</h2>
+            <p>最終ポイント: <span id="final-score-display">0</span> pt</p>
+            <button class="btn" id="btn-restart">タイトルに戻る</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+        import { getDatabase, ref, set, update, onValue, onDisconnect, remove} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBgjBb7jgLQLHfcgDSl2UwT549Kfz7F8Nk",
+            authDomain: "wordgame-dev-4d3a0.firebaseapp.com",
+            databaseURL: "https://wordgame-dev-4d3a0-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "wordgame-dev-4d3a0",
+            storageBucket: "wordgame-dev-4d3a0.firebasestorage.app",
+            messagingSenderId: "349718679870",
+            appId: "1:349718679870:web:a0a823fe4933e0d5531c6f",
+            measurementId: "G-1FXFN9JSMK"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let currentRoomId = "";
+        let myName = "";           
+        let myQuestions = [];      
+        let opponentQuestions = [];
+        let myAnswers = [];        
+
+        let setupIndex = 0;
+        let playIndex = 0;
+        let resultIndex = 0;       
+        let totalSeals = 15;
+        let correctCount = 0;
+        let timeLeft = 10;
+        let timerId;
+        let isAnswering = false;
+        let currentPhase = 'lobby';
+        let roomPlayerNames = [];  
+        let myAssignedWords = [];  
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        const cardContainer = document.getElementById("card-container");
+
+        function showPhase(phaseId) {
+            document.querySelectorAll('.phase').forEach(el => el.classList.remove('active'));
+            document.getElementById(phaseId).classList.add('active');
+            currentPhase = phaseId.replace('phase-', '');
+            
+            if(currentPhase === 'setup' || currentPhase === 'play') {
+                document.getElementById("card-wrapper").style.display = 'block';
+            } else {
+                document.getElementById("card-wrapper").style.display = 'none';
+            }
+        }
+
+        function joinGame() {
+            const roomId = document.getElementById("room-input").value.trim();
+            const name = document.getElementById("name-input").value.trim();
+            if (!roomId || !name) {
+                document.getElementById("lobby-error").innerText = "合言葉と名前を両方入力してください！";
+                return;
+            } else {
+                document.getElementById("lobby-error").innerText = "";
+            }
+
+            currentRoomId = roomId;
+            myName = name;
+
+            const myPlayerRef = ref(db, `rooms/${currentRoomId}/players/${myName}`);
+            set(myPlayerRef, { status: 'joined' });
+            onDisconnect(myPlayerRef).remove();
+            
+            showPhase('phase-room-wait');
+
+            const roomRef = ref(db, `rooms/${currentRoomId}`);
+            onValue(roomRef, (snapshot) => {
+                const roomData = snapshot.val();
+                if (!roomData || !roomData.players) return;
+
+                const players = roomData.players;
+                roomPlayerNames = Object.keys(players);
+
+                if (roomData.assignments && roomData.assignments[myName]) {
+                    myAssignedWords = roomData.assignments[myName];
+                }
+
+                if (currentPhase === 'room-wait') {
+                    document.getElementById("joined-players-list").innerText = "参加者: " + roomPlayerNames.join("、");
+                    document.getElementById("btn-start-game").disabled = roomPlayerNames.length < 2;
+                }
+
+                if (roomData.status === 'setting' && currentPhase === 'room-wait') {
+                    showPhase('phase-rules');
+                }
+
+                if (roomData.status === 'setting' && currentPhase === 'wait') {
+                    const allReady = roomPlayerNames.every(p => players[p].status === 'ready' || players[p].status === 'done');
+                    if (allReady) {
+                        const opponentName = roomPlayerNames.find(n => n !== myName);
+                        if (opponentName && players[opponentName].questions) {
+                            opponentQuestions = players[opponentName].questions;
+                            startPlayPhase(); 
+                        }
+                    }
+                }
+            });
+        }
+
+        function startGame() {
+            if (wordDataList.length < 20) {
+                alert("エラー：words.jsの単語を20個以上に増やしてください！");
+                return;
+            }
+
+            const shuffled = shuffleArray(wordDataList);
+            const selected20 = shuffled.slice(0, 20);
+
+            const assignments = {};
+            assignments[roomPlayerNames[0]] = selected20.slice(0, 10);
+            assignments[roomPlayerNames[1]] = selected20.slice(10, 20);
+
+            update(ref(db, `rooms/${currentRoomId}`), {
+                assignments: assignments,
+                status: 'setting'
+            });
+        }
+
+        function loadSetupWord() {
+            if (setupIndex >= myAssignedWords.length) return;
+            const currentData = myAssignedWords[setupIndex];
+            
+            document.getElementById("card-genre").innerText = `${currentData.genre}`;
+            document.getElementById("card-word").innerText = currentData.word;
+            document.querySelectorAll('.seal').forEach(seal => seal.remove());
+            document.getElementById("setup-progress").innerText = `${setupIndex + 1}/${myAssignedWords.length}`;
+            
+            const btnNext = document.getElementById("btn-setup-next");
+            if (setupIndex === myAssignedWords.length - 1) {
+                btnNext.innerText = "完成して待つ";
+            } else {
+                btnNext.innerText = "次へ ＞";
+            }
+            showPhase("phase-setup");
+        }
+
+        cardContainer.addEventListener('click', function(e) {
+            if (currentPhase !== 'setup') return;
+            if (e.target.classList.contains('seal')) {
+                e.target.remove();
+                totalSeals++;
+                document.getElementById("setup-seal-count").innerText = totalSeals;
+                return;
+            }
+            if (totalSeals <= 0) { 
+                return; 
+            }
+            const rect = cardContainer.getBoundingClientRect();
+            const seal = document.createElement('div');
+            seal.classList.add('seal');
+            const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+            const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
+            seal.style.left = `${xPercent}%`;
+            seal.style.top = `${yPercent}%`;
+            cardContainer.appendChild(seal);
+            totalSeals--;
+            document.getElementById("setup-seal-count").innerText = totalSeals;
+        });
+
+        function saveAndNextSetup() {
+            const seals = document.querySelectorAll('.seal');
+            const sealCoordinates = [];
+            seals.forEach(seal => {
+                sealCoordinates.push({ left: seal.style.left, top: seal.style.top });
+            });
+            
+            myQuestions.push({
+                wordData: myAssignedWords[setupIndex],
+                seals: sealCoordinates
+            });
+            setupIndex++;
+
+            if (setupIndex >= myAssignedWords.length) {
+                showPhase("phase-wait");
+                set(ref(db, `rooms/${currentRoomId}/players/${myName}`), {
+                    status: 'ready',
+                    questions: myQuestions
+                });
+            } else {
+                loadSetupWord(); 
+            }
+        }
+
+        function startPlayPhase() {
+            playIndex = 0;
+            myAnswers = [];
+            loadPlayWord();
+        }
+
+        function loadPlayWord() {
+            const currentQ = opponentQuestions[playIndex];
+            document.getElementById("card-genre").innerText = `ジャンル: ${currentQ.wordData.genre}`;
+            document.getElementById("card-word").innerText = currentQ.wordData.word;
+            document.getElementById("play-progress").innerText = `${playIndex + 1}/${opponentQuestions.length}`;
+
+            document.querySelectorAll('.seal').forEach(seal => seal.remove());
+            if(currentQ.seals) {
+                currentQ.seals.forEach(pos => {
+                    const seal = document.createElement('div');
+                    seal.classList.add('seal');
+                    seal.style.left = pos.left;
+                    seal.style.top = pos.top;
+                    cardContainer.appendChild(seal);
+                });
+            }
+
+            showPhase("phase-play");
+            timeLeft = 10;
+            isAnswering = true;
+            document.getElementById("timer").innerText = timeLeft;
+            document.getElementById("answer-input").value = "";
+            document.getElementById("answer-input").focus();
+            timerId = setInterval(countDown, 1000);
+        }
+
+        function countDown() {
+            timeLeft--;
+            document.getElementById("timer").innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(timerId); 
+                document.getElementById("answer-input").value = "";
+                checkAnswer();
+            }
+        }
+
+        function checkAnswer() {
+            if (!isAnswering) return;
+            clearInterval(timerId); 
+            isAnswering = false;
+
+            const userAnswer = document.getElementById("answer-input").value.trim(); 
+            myAnswers.push(userAnswer);
+
+            playIndex++;
+            if (playIndex >= opponentQuestions.length) {
+                startResultPhase(); 
+            } else {
+                loadPlayWord();
+            }
+        }
+
+        function startResultPhase() {
+            resultIndex = 0;
+            loadResultWord();
+        }
+
+        function loadResultWord() {
+            if (resultIndex >= opponentQuestions.length) {
+                let finalScore = totalSeals + correctCount * 2;
+                document.getElementById("final-score-display").innerText = finalScore;
+                showPhase("phase-finish");
+                return;
+            }
+
+            const currentQ = opponentQuestions[resultIndex];
+            const myAns = myAnswers[resultIndex];
+            const correctAns = currentQ.wordData.word;
+
+            document.getElementById("result-progress").innerText = `${resultIndex + 1}/${opponentQuestions.length}`;
+            document.getElementById("res-genre").innerText = `ジャンル: ${currentQ.wordData.genre}`;
+            document.getElementById("res-word").innerText = correctAns;
+            
+            if (myAns === "") {
+                document.getElementById("res-my-ans").innerText = `あなたの回答: (時間切れ)`;
+            } else {
+                document.getElementById("res-my-ans").innerText = `あなたの回答: ${myAns}`;
+            }
+
+            if (myAns === correctAns) {
+                document.getElementById("res-judgment").innerText = "⭕️ 正解";
+                document.getElementById("res-judgment").className = "result-judgment text-correct";
+                correctCount++; 
+            } else {
+                document.getElementById("res-judgment").innerText = "❌ 不正解";
+                document.getElementById("res-judgment").className = "result-judgment text-incorrect";
+            }
+            
+            const btnNext = document.getElementById("btn-result-next");
+            if (resultIndex === opponentQuestions.length - 1) {
+                btnNext.innerText = "最終結果";
+            } else {
+                btnNext.innerText = "次の結果へ ＞";
+            }
+
+            showPhase("phase-result");
+        }
+
+        function loadNextResult() {
+            resultIndex++;
+            loadResultWord();
+        }
+
+        document.getElementById("answer-input").addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') checkAnswer();
+        });
+
+        document.getElementById('btn-join-game').addEventListener('click', joinGame);
+        document.getElementById('btn-start-game').addEventListener('click', startGame);
+        document.getElementById('btn-go-setup').addEventListener('click', loadSetupWord);
+        document.getElementById('btn-setup-next').addEventListener('click', saveAndNextSetup);
+        document.getElementById('btn-check-answer').addEventListener('click', checkAnswer);
+        document.getElementById('btn-result-next').addEventListener('click', loadNextResult);
+        document.getElementById('btn-restart').addEventListener('click', async function() {
+            this.disabled = true;
+            this.innerText = "退出中...";
+
+            if (currentRoomId) {
+                const roomRef = ref(db, `rooms/${currentRoomId}`);
+                remove(roomRef).then(() => {
+                    location.reload();
+                });
+            } else {
+                location.reload();
+            }
+        });
+
+    </script>
+</body>
+</html>
