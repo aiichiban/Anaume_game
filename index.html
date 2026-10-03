@@ -64,11 +64,6 @@
             </div>
         </div>
 
-        <div id="phase-play-wait" class="phase">
-            <h2 class="wait-text">相手の解答を待っています...</h2>
-            <p>お互いが全問解き終わると、<br>一斉に結果発表が始まります！</p>
-        </div>
-
         <div id="phase-result" class="phase">
             <div class="title-text color-play"> 結果発表 (<span id="result-progress">1/1</span>)</div>
             
@@ -96,13 +91,14 @@
         import { getDatabase, ref, set, update, onValue, onDisconnect, remove } from "firebase/database";
 
         const firebaseConfig = {
-            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-            databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
-            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-            storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-            messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-            appId: import.meta.env.VITE_FIREBASE_APP_ID
+            apiKey: "AIzaSyBgjBb7jgLQLHfcgDSl2UwT549Kfz7F8Nk",
+            authDomain: "wordgame-dev-4d3a0.firebaseapp.com",
+            databaseURL: "https://wordgame-dev-4d3a0-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "wordgame-dev-4d3a0",
+            storageBucket: "wordgame-dev-4d3a0.firebasestorage.app",
+            messagingSenderId: "349718679870",
+            appId: "1:349718679870:web:a0a823fe4933e0d5531c6f",
+            measurementId: "G-1FXFN9JSMK"
         };
 
         const app = initializeApp(firebaseConfig);
