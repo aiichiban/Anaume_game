@@ -12,7 +12,7 @@
         
         <div id="card-wrapper" style="display: none;">
             <div id="card-container">
-                <div id="card-genre">ジャンル: ???</div>
+                <div id="card-genre">???</div>
                 <div id="card-word">単語</div>
             </div>
         </div>
@@ -92,18 +92,17 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-        import { getDatabase, ref, set, update, onValue, onDisconnect, remove} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+        import { initializeApp } from "firebase/app";
+        import { getDatabase, ref, set, update, onValue, onDisconnect, remove } from "firebase/database";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyBgjBb7jgLQLHfcgDSl2UwT549Kfz7F8Nk",
-            authDomain: "wordgame-dev-4d3a0.firebaseapp.com",
-            databaseURL: "https://wordgame-dev-4d3a0-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "wordgame-dev-4d3a0",
-            storageBucket: "wordgame-dev-4d3a0.firebasestorage.app",
-            messagingSenderId: "349718679870",
-            appId: "1:349718679870:web:a0a823fe4933e0d5531c6f",
-            measurementId: "G-1FXFN9JSMK"
+            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+            databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+            storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+            messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+            appId: import.meta.env.VITE_FIREBASE_APP_ID
         };
 
         const app = initializeApp(firebaseConfig);
@@ -295,7 +294,7 @@
 
         function loadPlayWord() {
             const currentQ = opponentQuestions[playIndex];
-            document.getElementById("card-genre").innerText = `ジャンル: ${currentQ.wordData.genre}`;
+            document.getElementById("card-genre").innerText = `${currentQ.wordData.genre}`;
             document.getElementById("card-word").innerText = currentQ.wordData.word;
             document.getElementById("play-progress").innerText = `${playIndex + 1}/${opponentQuestions.length}`;
 
@@ -363,7 +362,7 @@
             const correctAns = currentQ.wordData.word;
 
             document.getElementById("result-progress").innerText = `${resultIndex + 1}/${opponentQuestions.length}`;
-            document.getElementById("res-genre").innerText = `ジャンル: ${currentQ.wordData.genre}`;
+            document.getElementById("res-genre").innerText = `${currentQ.wordData.genre}`;
             document.getElementById("res-word").innerText = correctAns;
             
             if (myAns === "") {
